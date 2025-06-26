@@ -1,6 +1,5 @@
 ﻿using CarRentalSystem.Application.Interfaces;
 using CarRentalSystem.Core.Models;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -8,7 +7,7 @@ using VibeCall.Server.Dtos.Account;
 
 namespace CarRentalSystem.Api.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/account")]
     [ApiController]
     public class AccountController : ControllerBase
     {
