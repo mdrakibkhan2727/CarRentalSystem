@@ -1,5 +1,6 @@
-﻿using CarRentalSystem.Application.Interfaces;
-using CarRentalSystem.Core.Models;
+﻿using CarRentalSystem.Business.Dtos.Account;
+using CarRentalSystem.Business.Repositories.IRepository;
+using CarRentalSystem.Data.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -7,17 +8,17 @@ using VibeCall.Server.Dtos.Account;
 
 namespace CarRentalSystem.Api.Controllers
 {
-    [Route("api/account")]
+    [Route("api/v1/account")]
     [ApiController]
     public class AccountController : ControllerBase
     {
         private readonly UserManager<AppUser> _userManager;
-        private readonly ITokenService _tokenService;
+        private readonly ITokenRepository _tokenRepository;
         private readonly SignInManager<AppUser> _signInManager;
-        public AccountController(UserManager<AppUser> userManager, ITokenService tokenService, SignInManager<AppUser> signInManager)
+        public AccountController(UserManager<AppUser> userManager, ITokenRepository tokenRepository, SignInManager<AppUser> signInManager)
         {
             _userManager = userManager;
-            _tokenService = tokenService;
+            _tokenRepository = tokenRepository;
             _signInManager = signInManager;
         }
 
@@ -43,7 +44,7 @@ namespace CarRentalSystem.Api.Controllers
                     {
                         UserName = user.UserName,
                         Email = user.Email,
-                        Token = _tokenService.CreateToken(user)
+                        Token = _tokenRepository.CreateToken(user)
                     }
                 );
         }
@@ -76,7 +77,7 @@ namespace CarRentalSystem.Api.Controllers
                              {
                                  UserName = appUser.UserName,
                                  Email = appUser.Email,
-                                 Token = _tokenService.CreateToken(appUser)
+                                 Token = _tokenRepository.CreateToken(appUser)
                              }
                         );
                     }

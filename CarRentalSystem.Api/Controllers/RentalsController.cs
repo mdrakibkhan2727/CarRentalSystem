@@ -1,98 +1,52 @@
-﻿// CarRentalSystem.Api/Controllers/RentalsController.cs
-using CarRentalSystem.Application.DTOs;
-using CarRentalSystem.Application.Interfaces;
+﻿using CarRentalSystem.Business.DTOs.Rental;
+using CarRentalSystem.Business.Helpers;
+using CarRentalSystem.Business.Mappers;
+using CarRentalSystem.Business.Repositories.IRepository;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Threading.Tasks;
 
 namespace CarRentalSystem.Api.Controllers
 {
+    [Authorize]
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/v1/rentals")]
     public class RentalsController : ControllerBase
     {
-        private readonly IRentalService _rentalService;
+        private readonly IRentalRepository _rentalRepository;
 
-        public RentalsController(IRentalService rentalService)
+        public RentalsController(IRentalRepository rentalRepository)
         {
-            _rentalService = rentalService;
+            _rentalRepository = rentalRepository;
         }
 
-        /// <summary>
-        /// Registers a new car rental.
-        /// </summary>
-        /// <param name="rentalDto">Details for the new rental.</param>
-        /// <returns>A newly created rental response.</returns>
-        [HttpPost]
-        [ProducesResponseType(typeof(RentalResponseDto), 201)]
-        [ProducesResponseType(typeof(ProblemDetails), 400)]
-        [ProducesResponseType(typeof(ProblemDetails), 404)] // Customer or Car not found
-        [ProducesResponseType(typeof(ProblemDetails), 409)] // Conflict (e.g., car not available)
-        public async Task<IActionResult> RegisterRental([FromBody] RegisterRentalDto rentalDto)
+        [HttpGet]
+        [Route("get-all-registerRental")]
+        public async Task<IActionResult> GetAll([FromQuery] QueryRegisterRentalObject query)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
             try
             {
-                var response = await _rentalService.RegisterRentalAsync(rentalDto);
-                return CreatedAtAction(nameof(GetRentalById), new { rentalId = response.RentalId }, response);
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(new ProblemDetails { Title = "Invalid Request", Detail = ex.Message });
-            }
-            catch (InvalidOperationException ex)
-            {
-                // This covers car not found, customer not found, and car not available
-                if (ex.Message.Contains("not found"))
-                {
-                    return NotFound(new ProblemDetails { Title = "Resource Not Found", Detail = ex.Message });
-                }
-                return Conflict(new ProblemDetails { Title = "Rental Conflict", Detail = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new ProblemDetails { Title = "Internal Server Error", Detail = ex.Message });
-            }
-        }
-
-        /// <summary>
-        /// Modifies an existing rental reservation.
-        /// </summary>
-        /// <param name="rentalId">The unique ID of the rental to modify.</param>
-        /// <param name="updateDto">New details for the rental.</param>
-        /// <returns>The updated rental response.</returns>
-        [HttpPut("{rentalId:guid}")]
-        [ProducesResponseType(typeof(RentalResponseDto), 200)]
-        [ProducesResponseType(typeof(ProblemDetails), 400)]
-        [ProducesResponseType(404)] // Rental or new Car not found
-        [ProducesResponseType(typeof(ProblemDetails), 409)] // Conflict (e.g., car not available with new dates/car)
-        public async Task<IActionResult> ModifyReservation(Guid rentalId, [FromBody] UpdateRentalDto updateDto)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            try
-            {
-                var response = await _rentalService.ModifyReservationAsync(rentalId, updateDto);
+                var response = await _rentalRepository.GetAllAsync(query);
                 return Ok(response);
             }
-            catch (ArgumentException ex)
+            catch (Exception ex)
             {
-                return BadRequest(new ProblemDetails { Title = "Invalid Request", Detail = ex.Message });
+                return StatusCode(500, new ProblemDetails { Title = "Internal Server Error", Detail = ex.Message });
             }
-            catch (InvalidOperationException ex)
+        }
+
+        [HttpGet]
+        [Route("single-registerRental/{id}")]
+        public async Task<IActionResult> GetById(int id)
+        {
+            try
             {
-                if (ex.Message.Contains("not found"))
+                var response = await _rentalRepository.GetByIdAsync(id);
+                if (response == null)
                 {
-                    return NotFound(new ProblemDetails { Title = "Resource Not Found", Detail = ex.Message });
+                    return NotFound(new { Message = $"Rental with ID {id} not found." });
                 }
-                return Conflict(new ProblemDetails { Title = "Reservation Conflict", Detail = ex.Message });
+
+                return Ok(response);
             }
             catch (Exception ex)
             {
@@ -100,29 +54,35 @@ namespace CarRentalSystem.Api.Controllers
             }
         }
 
-        /// <summary>
-        /// Cancels a previously registered rental.
-        /// </summary>
-        /// <param name="rentalId">The unique ID of the rental to cancel.</param>
-        /// <returns>No content on successful cancellation.</returns>
-        [HttpDelete("{rentalId:guid}")]
-        [ProducesResponseType(204)] // No Content
-        [ProducesResponseType(404)] // Rental not found
-        [ProducesResponseType(typeof(ProblemDetails), 400)] // Cannot cancel if already started
-        public async Task<IActionResult> CancelRental(Guid rentalId)
+        [HttpPost]
+        [Route("registerRental")]
+        public async Task<IActionResult> Create([FromBody] CreateRegisterRentalRequestDto rentalDto)
         {
             try
             {
-                await _rentalService.CancelRentalAsync(rentalId);
-                return NoContent(); // 204 No Content for successful deletion
+                var response = await _rentalRepository.CreateAsync(rentalDto);
+                return CreatedAtAction(nameof(GetById), new { id = response.Id }, response.ToRegisterRentalDto());
             }
-            catch (InvalidOperationException ex)
+            catch (Exception ex)
             {
-                if (ex.Message.Contains("not found"))
+                return StatusCode(500, new ProblemDetails { Title = "Internal Server Error", Detail = ex.Message });
+            }
+        }
+
+        [HttpPut]
+        [Route("registerRental/{id}")]
+        public async Task<IActionResult> Update(int id, [FromBody] UpdateRegisterRentalDto rentalDto)
+        {
+            try
+            {
+                var response = await _rentalRepository.UpdateAsync(id, rentalDto);
+
+                if (response == null)
                 {
                     return NotFound();
                 }
-                return BadRequest(new ProblemDetails { Title = "Cancellation Failed", Detail = ex.Message });
+
+                return Ok(response.ToRegisterRentalDto());
             }
             catch (Exception ex)
             {
@@ -130,22 +90,24 @@ namespace CarRentalSystem.Api.Controllers
             }
         }
 
-        /// <summary>
-        /// Retrieves details of a specific rental.
-        /// </summary>
-        /// <param name="rentalId">The unique ID of the rental.</param>
-        /// <returns>Rental details.</returns>
-        [HttpGet("{rentalId:guid}")]
-        [ProducesResponseType(typeof(RentalResponseDto), 200)]
-        [ProducesResponseType(404)]
-        public async Task<IActionResult> GetRentalById(Guid rentalId)
+        [HttpDelete]
+        [Route("delete-registerRental/{id}")]
+        public async Task<IActionResult> Delete(int id)
         {
-            var rental = await _rentalService.GetRentalByIdAsync(rentalId);
-            if (rental == null)
+            try
             {
-                return NotFound();
+                var response = await _rentalRepository.DeleteAsync(id);
+                if (response == null)
+                {
+                   return NotFound(new { Message = $"Rental with ID {id} not found." });
+                }
+
+                return NotFound(new { Message = $"Rental with ID {id} not found." });
             }
-            return Ok(rental);
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ProblemDetails { Title = "Internal Server Error", Detail = ex.Message });
+            }  
         }
     }
 }
