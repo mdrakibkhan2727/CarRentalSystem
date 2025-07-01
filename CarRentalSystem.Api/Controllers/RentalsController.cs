@@ -99,15 +99,16 @@ namespace CarRentalSystem.Api.Controllers
                 var response = await _rentalRepository.DeleteAsync(id);
                 if (response == null)
                 {
-                   return NotFound(new { Message = $"Rental with ID {id} not found." });
+                    return NotFound(new { Message = $"Rental with ID {id} not found." });
                 }
 
-                return NotFound(new { Message = $"Rental with ID {id} not found." });
+                return Ok(new { Message = $"Rental with ID {id} deleted successfully." });
             }
             catch (Exception ex)
             {
                 return StatusCode(500, new ProblemDetails { Title = "Internal Server Error", Detail = ex.Message });
-            }  
+            }
         }
+
     }
 }
