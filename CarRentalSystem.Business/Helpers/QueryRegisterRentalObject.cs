@@ -2,7 +2,7 @@
 {
     public class QueryRegisterRentalObject
     {
-        public string? FullName { get; set; }
+        public string? SearchTerm { get; set; }
         public string? SortBy { get; set; } = null;
         public bool IsDecsending { get; set; } = false;
         public int PageNumber { get; set; } = 1;
