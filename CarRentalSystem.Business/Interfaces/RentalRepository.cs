@@ -23,9 +23,12 @@ namespace CarRentalSystem.Business.Repositories
             var rentalsQuery = _dBContext.Rentals.AsQueryable();
 
             // Filter by Customer FullName
-            if (!string.IsNullOrWhiteSpace(query.FullName))
+            if (!string.IsNullOrWhiteSpace(query.SearchTerm))
             {
-                rentalsQuery = rentalsQuery.Where(r => r.FullName.Contains(query.FullName));
+                rentalsQuery = rentalsQuery.Where(r => 
+                  r.FullName.ToLower().Contains(query.SearchTerm.ToLower()) ||
+                  r.Phone.ToLower().Contains(query.SearchTerm.ToLower())
+                );
             }
 
             // Sorting
